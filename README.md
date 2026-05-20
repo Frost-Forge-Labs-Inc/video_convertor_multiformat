@@ -83,8 +83,8 @@ git clone https://github.com/Frost-Forge-Labs-Inc/video_convertor_multiformat.gi
 cd video_convertor_multiformat
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
+python -m pip install -U pip
+python -m pip install -e .
 ```
 
 Windows PowerShell:
@@ -94,8 +94,8 @@ git clone https://github.com/Frost-Forge-Labs-Inc/video_convertor_multiformat.gi
 cd video_convertor_multiformat
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-pip install -e .
+py -m pip install -U pip
+py -m pip install -e .
 ```
 
 Repository name: `video_convertor_multiformat`.
@@ -105,6 +105,60 @@ Python package/module name: `video_convertor_multiformat`.
 Python distribution/package name: `video-convertor-multiformat`.
 
 Installed commands: `media-convert` and `media-convert-ui`.
+
+## Update, Uninstall, Or Reinstall
+
+If you installed from a cloned GitHub checkout with `pip install -e .`, update it
+from inside the repository. Activate the same virtual environment you used for
+installation before running the `pip` commands.
+
+```bash
+cd video_convertor_multiformat
+git pull
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e .
+```
+
+Windows PowerShell:
+
+```powershell
+cd video_convertor_multiformat
+git pull
+.\.venv\Scripts\Activate.ps1
+py -m pip install -U pip
+py -m pip install -e .
+```
+
+To uninstall the command-line tools from the active Python environment:
+
+```bash
+python -m pip uninstall video-convertor-multiformat
+```
+
+`pip uninstall` removes the installed commands, but it does not delete the cloned
+repository, local reports, prepared FFmpeg tools, or other local files.
+
+To fully remove a local editable install, uninstall it first, then delete the cloned
+folder. This permanently deletes local changes and generated files inside that
+folder.
+
+```bash
+python -m pip uninstall video-convertor-multiformat
+cd ..
+rm -rf video_convertor_multiformat
+```
+
+Windows PowerShell:
+
+```powershell
+py -m pip uninstall video-convertor-multiformat
+cd ..
+Remove-Item -Recurse -Force .\video_convertor_multiformat
+```
+
+To reinstall a fresh copy, repeat the [Install From GitHub](#install-from-github)
+steps.
 
 ## CLI Usage
 
