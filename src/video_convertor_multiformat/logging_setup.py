@@ -7,7 +7,7 @@ from pathlib import Path
 
 def setup_logging(log_dir: Path, verbose: bool = False) -> Path:
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "video2mp4.log"
+    log_file = log_dir / "media-convert.log"
 
     root = logging.getLogger()
     root.setLevel(logging.DEBUG if verbose else logging.INFO)

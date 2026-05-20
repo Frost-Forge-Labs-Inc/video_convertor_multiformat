@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-python -m video_to_mp4_converter.cli \
+python3 -m video_convertor_multiformat.cli \
   --input "./input" \
   --output "./output" \
   --formats "mp4,mp3,wav" \

@@ -46,7 +46,7 @@ output/
         song.wav
         talk.wav
   logs/
-    video2mp4.log
+    media-convert.log
   reports/
     conversion_report_YYYYMMDD_HHMMSS.csv
     conversion_report_YYYYMMDD_HHMMSS.json
@@ -100,7 +100,9 @@ pip install -e .
 
 Repository name: `video_convertor_multiformat`.
 
-Python package/module name: `video_to_mp4_converter`.
+Python package/module name: `video_convertor_multiformat`.
+
+Python distribution/package name: `video-convertor-multiformat`.
 
 Installed commands: `media-convert` and `media-convert-ui`.
 
@@ -132,10 +134,10 @@ Legacy command names still work for compatibility:
 video2mp4 --input ./input --output ./output --formats mp4,mp3
 ```
 
-Or from inside the cloned repository before installing the console scripts:
+Or from inside the cloned repository before installing the package:
 
 ```bash
-python3 -m video_to_mp4_converter.cli --input ./input --output ./output --formats mp4,mp3,wav
+PYTHONPATH=src python3 -m video_convertor_multiformat.cli --input ./input --output ./output --formats mp4,mp3,wav
 ```
 
 ## Common Options
@@ -159,7 +161,7 @@ media-convert-ui
 Or:
 
 ```bash
-python3 -m video_to_mp4_converter.ui_tkinter
+python3 -m video_convertor_multiformat.ui_tkinter
 ```
 
 The UI lets you choose input/output folders, select multiple output formats, scan subfolders, preserve folder structure, choose quality settings, and watch progress.
@@ -272,7 +274,7 @@ video_convertor_multiformat/
   requirements.txt
   LICENSE
   NOTICE
-src/video_to_mp4_converter/
+src/video_convertor_multiformat/
   cli.py              # CLI entry point
   ui_tkinter.py       # desktop UI
   converter.py        # conversion workflow

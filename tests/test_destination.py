@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from video_to_mp4_converter.converter import MediaConverter
-from video_to_mp4_converter.models import ConversionConfig
+from video_convertor_multiformat.converter import MediaConverter
+from video_convertor_multiformat.models import ConversionConfig
 
 
 def test_destination_preserves_structure_and_uses_format_root(tmp_path: Path) -> None:
