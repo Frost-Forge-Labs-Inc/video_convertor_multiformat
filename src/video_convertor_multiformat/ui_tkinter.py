@@ -184,7 +184,15 @@ class ConverterApp(tk.Tk):
             converter = MediaConverter(ffmpeg_path)
             total = len(converter.discover_files(config)) * len(config.normalized_output_formats())
             self.event_queue.put(("total", total))
-            results = converter.convert_directory(config, progress_callback=self.event_queue.put)
+
+            def _on_job_start(job_num: int, source: Path) -> None:
+                self.event_queue.put(("job_start", (job_num, source.name)))
+
+            results = converter.convert_directory(
+                config,
+                progress_callback=self.event_queue.put,
+                start_callback=_on_job_start,
+            )
             reports = write_reports(results, output_dir / "reports")
             self.event_queue.put(("done", (results, reports)))
         except Exception as exc:
@@ -223,6 +231,10 @@ class ConverterApp(tk.Tk):
                         self.progress_label.configure(
                             text=f"0 / {self._total_jobs}  (0%)" if self._total_jobs > 0 else "No files found"
                         )
+                    elif kind == "job_start":
+                        job_num, name = payload
+                        stem = name if len(name) <= 60 else name[:57] + "..."
+                        self.status_label.configure(text=f"Working on #{job_num} - {stem}")
                     elif kind == "done":
                         self.status_label.configure(text="Done")
                         self.start_button.configure(state="normal")

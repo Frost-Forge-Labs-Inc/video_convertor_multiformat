@@ -18,6 +18,7 @@ from .models import AUDIO_FORMATS, IMAGE_FORMATS, VIDEO_FORMATS, ConversionConfi
 
 LOGGER = logging.getLogger(__name__)
 ProgressCallback = Callable[[ConversionResult], None]
+StartCallback = Callable[[int, Path], None]
 
 
 class MediaConverter:
@@ -46,6 +47,7 @@ class MediaConverter:
         self,
         config: ConversionConfig,
         progress_callback: ProgressCallback | None = None,
+        start_callback: StartCallback | None = None,
     ) -> list[ConversionResult]:
         self._validate_config(config)
         results: list[ConversionResult] = []
@@ -53,8 +55,12 @@ class MediaConverter:
         formats = config.normalized_output_formats()
         LOGGER.info("Discovered %d input file(s). Output formats: %s", len(files), ", ".join(formats))
 
+        job_num = 0
         for source in files:
             for output_format in formats:
+                job_num += 1
+                if start_callback:
+                    start_callback(job_num, source)
                 result = self.process_file(source, output_format, config)
                 results.append(result)
                 LOGGER.info(
