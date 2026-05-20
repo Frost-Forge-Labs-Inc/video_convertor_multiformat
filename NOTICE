@@ -1,0 +1,36 @@
+Universal Media Converter
+Copyright 2026 Frost Forge Labs Inc.
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+-------------------------------------------------------------------------------
+Third-party conversion engine
+-------------------------------------------------------------------------------
+
+Universal Media Converter orchestrates FFmpeg for media conversion. FFmpeg is a
+separate project and keeps its own license terms. The project may use a system
+FFmpeg executable, a user-provided FFmpeg executable, or an FFmpeg binary
+provided through imageio-ffmpeg.
+
+  FFmpeg
+    License: LGPL v2.1 or later for most builds; some builds include GPL
+    components depending on compile-time options.
+    Source:  https://ffmpeg.org/
+    Legal:   https://ffmpeg.org/legal.html
+
+-------------------------------------------------------------------------------
+Python dependencies
+-------------------------------------------------------------------------------
+
+  imageio-ffmpeg
+    License: BSD-2-Clause
+    Source:  https://github.com/imageio/imageio-ffmpeg
+
+-------------------------------------------------------------------------------
+Distribution note
+-------------------------------------------------------------------------------
+
+This repository does not intentionally commit FFmpeg binaries. If a release
+artifact bundles FFmpeg or redistributes imageio-ffmpeg-provided binaries, keep
+the corresponding third-party license notices with that artifact.
+
