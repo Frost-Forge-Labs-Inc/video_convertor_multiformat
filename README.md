@@ -69,6 +69,10 @@ Copyright 2026 Frost Forge Labs Inc. See [frostforgelabs.ca](https://frostforgel
 
 If this project saves you time, you can support development through the funding links exposed by GitHub Sponsors for this repository.
 
+## Screenshot
+
+![Universal Media Converter while converting files](assets/sample-ui-while-operating.png)
+
 ## FFmpeg Strategy
 
 FFmpeg does not provide one universal official binary for every operating system. The official download page points users to OS/package-specific builds. To keep this project stable and GitHub-friendly, the code uses this priority order:
