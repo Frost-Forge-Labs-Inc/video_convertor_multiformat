@@ -76,16 +76,33 @@ FFmpeg does not provide one universal official binary for every operating system
 
 `imageio-ffmpeg` publishes platform-specific wheels containing FFmpeg binaries for supported platforms, which avoids fragile direct download URLs.
 
-## Install
+## Install From GitHub
 
 ```bash
-cd video_to_mp4_converter
+git clone https://github.com/Frost-Forge-Labs-Inc/video_convertor_multiformat.git
+cd video_convertor_multiformat
 python3 -m venv .venv
-source .venv/bin/activate        # macOS/Linux
-# .venv\Scripts\activate        # Windows PowerShell/CMD equivalent
+source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 ```
+
+Windows PowerShell:
+
+```powershell
+git clone https://github.com/Frost-Forge-Labs-Inc/video_convertor_multiformat.git
+cd video_convertor_multiformat
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install -e .
+```
+
+Repository name: `video_convertor_multiformat`.
+
+Python package/module name: `video_to_mp4_converter`.
+
+Installed commands: `media-convert` and `media-convert-ui`.
 
 ## CLI Usage
 
@@ -109,16 +126,16 @@ media-convert \
   --verbose
 ```
 
-The legacy command names still work:
+Legacy command names still work for compatibility:
 
 ```bash
 video2mp4 --input ./input --output ./output --formats mp4,mp3
 ```
 
-Or without installing the package:
+Or from inside the cloned repository before installing the console scripts:
 
 ```bash
-python -m video_to_mp4_converter.cli --input ./input --output ./output --formats mp4,mp3,wav
+python3 -m video_to_mp4_converter.cli --input ./input --output ./output --formats mp4,mp3,wav
 ```
 
 ## Common Options
@@ -142,7 +159,7 @@ media-convert-ui
 Or:
 
 ```bash
-python -m video_to_mp4_converter.ui_tkinter
+python3 -m video_to_mp4_converter.ui_tkinter
 ```
 
 The UI lets you choose input/output folders, select multiple output formats, scan subfolders, preserve folder structure, choose quality settings, and watch progress.
@@ -221,8 +238,13 @@ Then the script will use the system FFmpeg.
 ## Windows Notes
 
 ```powershell
+git clone https://github.com/Frost-Forge-Labs-Inc/video_convertor_multiformat.git
+cd video_convertor_multiformat
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m video_to_mp4_converter.cli --input "C:\Videos\raw" --output "C:\Videos\converted" --formats mp4,mp3
+pip install -e .
+media-convert --input "C:\Videos\raw" --output "C:\Videos\converted" --formats mp4,mp3
 ```
 
 The project will use `imageio-ffmpeg` if `ffmpeg.exe` is not on `PATH`.
@@ -244,6 +266,12 @@ pip install imageio-ffmpeg
 ## Project Architecture
 
 ```text
+video_convertor_multiformat/
+  README.md
+  pyproject.toml
+  requirements.txt
+  LICENSE
+  NOTICE
 src/video_to_mp4_converter/
   cli.py              # CLI entry point
   ui_tkinter.py       # desktop UI
