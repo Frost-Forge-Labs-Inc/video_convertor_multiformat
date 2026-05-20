@@ -38,6 +38,8 @@ class ConverterApp(tk.Tk):
         self._is_closing = False
         self._poll_after_id: str | None = None
         self._modal_after_ids: list[str] = []
+        self._total_jobs = 0
+        self._completed_jobs = 0
 
         self.input_var = tk.StringVar()
         self.output_var = tk.StringVar()
@@ -100,10 +102,17 @@ class ConverterApp(tk.Tk):
         self.status_label = ttk.Label(root, text="Ready")
         self.status_label.grid(row=4, column=1, columnspan=2, sticky="w", **padding)
 
+        progress_frame = ttk.Frame(root)
+        progress_frame.grid(row=5, column=0, columnspan=3, sticky="ew", padx=10, pady=(0, 4))
+        self.progress_bar = ttk.Progressbar(progress_frame, mode="determinate", maximum=100)
+        self.progress_bar.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self.progress_label = ttk.Label(progress_frame, text="", width=24, anchor="e")
+        self.progress_label.pack(side="right")
+
         self.log_box = tk.Text(root, height=20, wrap="word")
-        self.log_box.grid(row=5, column=0, columnspan=3, sticky="nsew", padx=10, pady=10)
+        self.log_box.grid(row=6, column=0, columnspan=3, sticky="nsew", padx=10, pady=(0, 10))
         root.columnconfigure(1, weight=1)
-        root.rowconfigure(5, weight=1)
+        root.rowconfigure(6, weight=1)
 
     def _choose_dir(self, var: tk.StringVar) -> None:
         selected = filedialog.askdirectory()
@@ -147,6 +156,10 @@ class ConverterApp(tk.Tk):
         self.start_button.configure(state="disabled")
         self.status_label.configure(text="Working...")
         self.log_box.delete("1.0", "end")
+        self._total_jobs = 0
+        self._completed_jobs = 0
+        self.progress_bar["value"] = 0
+        self.progress_label.configure(text="")
         config = ConversionConfig(
             input_dir=input_dir,
             output_dir=output_dir,
@@ -169,6 +182,8 @@ class ConverterApp(tk.Tk):
             manager = FFmpegManager()
             ffmpeg_path = manager.get_ffmpeg_path(auto_prepare=True)
             converter = MediaConverter(ffmpeg_path)
+            total = len(converter.discover_files(config)) * len(config.normalized_output_formats())
+            self.event_queue.put(("total", total))
             results = converter.convert_directory(config, progress_callback=self.event_queue.put)
             reports = write_reports(results, output_dir / "reports")
             self.event_queue.put(("done", (results, reports)))
@@ -189,14 +204,33 @@ class ConverterApp(tk.Tk):
                         f"{item.status.upper()}: {item.action} -> {item.output_format} | "
                         f"{item.source.name} | {item.message}\n"
                     )
+                    self._completed_jobs += 1
+                    if self._total_jobs > 0:
+                        pct = int(self._completed_jobs * 100 / self._total_jobs)
+                        self.progress_bar["value"] = pct
+                        self.progress_label.configure(
+                            text=f"{self._completed_jobs} / {self._total_jobs}  ({pct}%)"
+                        )
                 elif isinstance(item, tuple):
                     kind, payload = item
                     if pending_log_lines:
                         self._append_log("".join(pending_log_lines))
                         pending_log_lines.clear()
-                    if kind == "done":
+                    if kind == "total":
+                        self._total_jobs = int(payload)
+                        self._completed_jobs = 0
+                        self.progress_bar["value"] = 0
+                        self.progress_label.configure(
+                            text=f"0 / {self._total_jobs}  (0%)" if self._total_jobs > 0 else "No files found"
+                        )
+                    elif kind == "done":
                         self.status_label.configure(text="Done")
                         self.start_button.configure(state="normal")
+                        if self._total_jobs > 0:
+                            self.progress_bar["value"] = 100
+                            self.progress_label.configure(
+                                text=f"{self._total_jobs} / {self._total_jobs}  (100%)"
+                            )
                         results, reports = payload
                         summary = summarize_results(results)
                         self._append_log(f"\nReports created: {reports}\n")
