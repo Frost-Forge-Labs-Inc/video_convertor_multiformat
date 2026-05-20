@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import queue
+import sys
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -45,6 +47,7 @@ class ConverterApp(tk.Tk):
 
         self._build_ui()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._bring_to_front()
         self._schedule_poll()
 
     def _build_ui(self) -> None:
@@ -209,9 +212,36 @@ class ConverterApp(tk.Tk):
         self.log_box.insert("end", text)
         self.log_box.see("end")
 
+    def _bring_to_front(self) -> None:
+        # On macOS, Tkinter windows don't automatically become the key/active
+        # window on launch. The first click is consumed by the OS to focus the
+        # window rather than being delivered to the widget. Force the window
+        # frontmost so the first click reaches the widget directly.
+        self.update_idletasks()
+        if sys.platform == "darwin":
+            try:
+                from subprocess import run as _run
+                _run(
+                    [
+                        "osascript", "-e",
+                        f'tell app "System Events" to set frontmost of '
+                        f'the first process whose unix id is {os.getpid()} to true',
+                    ],
+                    check=False,
+                    capture_output=True,
+                )
+            except Exception:
+                pass
+        self.lift()
+        self.attributes("-topmost", True)
+        self.after(150, lambda: None if self._is_closing else self.attributes("-topmost", False))
+        self.focus_force()
+
     def _schedule_poll(self) -> None:
         if not self._is_closing:
-            self._poll_after_id = self.after(200, self._poll_queue)
+            active = self.worker is not None and self.worker.is_alive()
+            interval = 100 if active else 500
+            self._poll_after_id = self.after(interval, self._poll_queue)
 
     def _schedule_modal(self, callback: Callable[[], None]) -> None:
         after_id = ""
