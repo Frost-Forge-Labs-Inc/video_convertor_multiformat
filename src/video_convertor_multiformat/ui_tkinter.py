@@ -5,15 +5,17 @@ import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
+from typing import Callable
 
 from .cli import parse_formats
 from .converter import MediaConverter
 from .ffmpeg_manager import FFmpegManager
 from .logging_setup import setup_logging
 from .models import ConversionConfig, ConversionResult
-from .reporting import write_reports
+from .reporting import summarize_results, write_reports
 
 COMMON_FORMATS = ("mp4", "mkv", "mov", "webm", "mp3", "m4a", "wav", "flac", "aac")
+QUEUE_DRAIN_LIMIT = 50
 
 
 class ConverterApp(tk.Tk):
@@ -24,6 +26,9 @@ class ConverterApp(tk.Tk):
         self.resizable(True, True)
         self.event_queue: queue.Queue[ConversionResult | tuple[str, object]] = queue.Queue()
         self.worker: threading.Thread | None = None
+        self._is_closing = False
+        self._poll_after_id: str | None = None
+        self._modal_after_ids: list[str] = []
 
         self.input_var = tk.StringVar()
         self.output_var = tk.StringVar()
@@ -39,7 +44,8 @@ class ConverterApp(tk.Tk):
         self.format_vars = {fmt: tk.BooleanVar(value=(fmt == "mp4")) for fmt in COMMON_FORMATS}
 
         self._build_ui()
-        self.after(200, self._poll_queue)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._schedule_poll()
 
     def _build_ui(self) -> None:
         padding = {"padx": 10, "pady": 6}
@@ -106,8 +112,17 @@ class ConverterApp(tk.Tk):
     def _start(self) -> None:
         if self.worker and self.worker.is_alive():
             return
-        input_dir = Path(self.input_var.get()).expanduser()
-        output_dir = Path(self.output_var.get()).expanduser()
+        input_value = self.input_var.get().strip()
+        output_value = self.output_var.get().strip()
+        if not input_value:
+            messagebox.showerror("Invalid input", "Please select a valid input directory.")
+            return
+        if not output_value:
+            messagebox.showerror("Invalid output", "Please select an output directory.")
+            return
+
+        input_dir = Path(input_value).expanduser()
+        output_dir = Path(output_value).expanduser()
         output_formats = self._selected_formats()
         if not input_dir.exists():
             messagebox.showerror("Invalid input", "Please select a valid input directory.")
@@ -122,59 +137,108 @@ class ConverterApp(tk.Tk):
         self.start_button.configure(state="disabled")
         self.status_label.configure(text="Working...")
         self.log_box.delete("1.0", "end")
-        self.worker = threading.Thread(target=self._run_conversion, args=(input_dir, output_dir, output_formats), daemon=True)
+        config = ConversionConfig(
+            input_dir=input_dir,
+            output_dir=output_dir,
+            recursive=self.recursive_var.get(),
+            overwrite=self.overwrite_var.get(),
+            crf=self.crf_var.get(),
+            preset=self.preset_var.get(),
+            audio_bitrate=self.audio_bitrate_var.get(),
+            preserve_structure=self.preserve_structure_var.get(),
+            copy_same_extension=self.copy_same_var.get(),
+            output_formats=output_formats,
+            scan_all_files=self.all_files_var.get(),
+        )
+        self.worker = threading.Thread(target=self._run_conversion, args=(output_dir, config), daemon=True)
         self.worker.start()
 
-    def _run_conversion(self, input_dir: Path, output_dir: Path, output_formats: tuple[str, ...]) -> None:
+    def _run_conversion(self, output_dir: Path, config: ConversionConfig) -> None:
         try:
             setup_logging(output_dir / "logs")
             manager = FFmpegManager()
             ffmpeg_path = manager.get_ffmpeg_path(auto_prepare=True)
-            config = ConversionConfig(
-                input_dir=input_dir,
-                output_dir=output_dir,
-                recursive=self.recursive_var.get(),
-                overwrite=self.overwrite_var.get(),
-                crf=self.crf_var.get(),
-                preset=self.preset_var.get(),
-                audio_bitrate=self.audio_bitrate_var.get(),
-                preserve_structure=self.preserve_structure_var.get(),
-                copy_same_extension=self.copy_same_var.get(),
-                output_formats=output_formats,
-                scan_all_files=self.all_files_var.get(),
-            )
             converter = MediaConverter(ffmpeg_path)
             results = converter.convert_directory(config, progress_callback=self.event_queue.put)
             reports = write_reports(results, output_dir / "reports")
-            self.event_queue.put(("done", reports))
+            self.event_queue.put(("done", (results, reports)))
         except Exception as exc:
             self.event_queue.put(("error", exc))
 
     def _poll_queue(self) -> None:
+        if self._is_closing:
+            return
+        pending_log_lines: list[str] = []
+        drained = 0
         try:
-            while True:
+            while drained < QUEUE_DRAIN_LIMIT:
                 item = self.event_queue.get_nowait()
+                drained += 1
                 if isinstance(item, ConversionResult):
-                    self._append_log(
-                        f"{item.status.upper()}: {item.action} -> {item.output_format} | {item.source.name} | {item.message}\n"
+                    pending_log_lines.append(
+                        f"{item.status.upper()}: {item.action} -> {item.output_format} | "
+                        f"{item.source.name} | {item.message}\n"
                     )
                 elif isinstance(item, tuple):
                     kind, payload = item
+                    if pending_log_lines:
+                        self._append_log("".join(pending_log_lines))
+                        pending_log_lines.clear()
                     if kind == "done":
                         self.status_label.configure(text="Done")
                         self.start_button.configure(state="normal")
-                        self._append_log(f"\nReports created: {payload}\n")
+                        results, reports = payload
+                        summary = summarize_results(results)
+                        self._append_log(f"\nReports created: {reports}\n")
+                        self._schedule_modal(
+                            lambda text=summary.alert_text: messagebox.showinfo("Conversion Complete", text)
+                        )
+                        break
                     elif kind == "error":
                         self.status_label.configure(text="Failed")
                         self.start_button.configure(state="normal")
-                        messagebox.showerror("Conversion failed", str(payload))
+                        self._schedule_modal(lambda error=payload: messagebox.showerror("Conversion failed", str(error)))
+                        break
         except queue.Empty:
             pass
-        self.after(200, self._poll_queue)
+        if pending_log_lines:
+            self._append_log("".join(pending_log_lines))
+        self._schedule_poll()
 
     def _append_log(self, text: str) -> None:
         self.log_box.insert("end", text)
         self.log_box.see("end")
+
+    def _schedule_poll(self) -> None:
+        if not self._is_closing:
+            self._poll_after_id = self.after(200, self._poll_queue)
+
+    def _schedule_modal(self, callback: Callable[[], None]) -> None:
+        after_id = ""
+
+        def run() -> None:
+            if after_id in self._modal_after_ids:
+                self._modal_after_ids.remove(after_id)
+            if not self._is_closing:
+                callback()
+
+        after_id = self.after(0, run)
+        self._modal_after_ids.append(after_id)
+
+    def _on_close(self) -> None:
+        self._is_closing = True
+        if self._poll_after_id:
+            try:
+                self.after_cancel(self._poll_after_id)
+            except tk.TclError:
+                pass
+        for after_id in self._modal_after_ids:
+            try:
+                self.after_cancel(after_id)
+            except tk.TclError:
+                pass
+        self._modal_after_ids.clear()
+        self.destroy()
 
 
 def main() -> None:
