@@ -9,7 +9,7 @@ description = "Cross-platform batch media converter with multi-format output, CL
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Rakshitha Rodrigo" }]
+authors = [{ name = "Frost Forge Labs Inc.", email = "contact@frostforgelabs.ca" }]
 dependencies = [
   "imageio-ffmpeg>=0.5.1",
 ]

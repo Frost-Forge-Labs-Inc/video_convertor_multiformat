@@ -14,6 +14,8 @@ A cross-platform Python project for batch converting media files into one or mor
 - direct copy for files already matching the requested output format
 - free and open source under the Apache License 2.0
 
+Created and maintained by [Frost Forge Labs Inc.](https://frostforgelabs.ca).
+
 ## Output Folder Design
 
 If the input contains:
@@ -62,6 +64,8 @@ FFmpeg is a mature cross-platform tool for recording, converting, and streaming 
 ## License and Support
 
 Universal Media Converter is free and open source under the Apache License 2.0.
+
+Copyright 2026 Frost Forge Labs Inc. See [frostforgelabs.ca](https://frostforgelabs.ca).
 
 If this project saves you time, you can support development through the funding links exposed by GitHub Sponsors for this repository.
 

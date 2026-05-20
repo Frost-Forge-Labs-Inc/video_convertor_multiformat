@@ -1,3 +1,10 @@
+"""Report generation and conversion summary helpers.
+
+Copyright 2026 Frost Forge Labs Inc.
+https://frostforgelabs.ca
+Licensed under the Apache License, Version 2.0.
+"""
+
 from __future__ import annotations
 
 import csv

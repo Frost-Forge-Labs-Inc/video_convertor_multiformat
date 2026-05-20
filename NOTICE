@@ -1,5 +1,6 @@
 Universal Media Converter
 Copyright 2026 Frost Forge Labs Inc.
+https://frostforgelabs.ca
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -33,4 +34,3 @@ Distribution note
 This repository does not intentionally commit FFmpeg binaries. If a release
 artifact bundles FFmpeg or redistributes imageio-ffmpeg-provided binaries, keep
 the corresponding third-party license notices with that artifact.
-

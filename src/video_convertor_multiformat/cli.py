@@ -1,3 +1,10 @@
+"""Command-line interface for Universal Media Converter.
+
+Copyright 2026 Frost Forge Labs Inc.
+https://frostforgelabs.ca
+Licensed under the Apache License, Version 2.0.
+"""
+
 from __future__ import annotations
 
 import argparse
