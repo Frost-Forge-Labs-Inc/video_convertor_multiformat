@@ -107,6 +107,14 @@ class MediaConverter:
                     duration_seconds=time.perf_counter() - start,
                 )
 
+            # For cross-container video conversions, attempt stream copy (remux) before
+            # committing to a full re-encode. H.264 in MKV → MP4 remuxes in seconds;
+            # incompatible codecs (VP9 → MP4) fail fast and fall through to re-encode.
+            if fmt in VIDEO_FORMATS and source_fmt != fmt:
+                remux = self._try_stream_copy(source, destination, fmt, config, start)
+                if remux is not None:
+                    return remux
+
             cmd = self._build_ffmpeg_command(source, destination, fmt, config)
             LOGGER.debug("Running command: %s", " ".join(cmd))
             completed = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -168,6 +176,49 @@ class MediaConverter:
 
         cmd.append(str(destination))
         return cmd
+
+    def _try_stream_copy(
+        self,
+        source: Path,
+        destination: Path,
+        fmt: str,
+        config: ConversionConfig,
+        start: float,
+    ) -> ConversionResult | None:
+        """Attempt to remux streams without re-encoding. Returns a result on success, None if the
+        source codecs are incompatible with the target container (caller should re-encode instead)."""
+        cmd = [
+            str(self.ffmpeg_path), "-hide_banner",
+            "-y" if config.overwrite else "-n",
+            "-i", str(source),
+            "-map_metadata", "0",
+            "-map", "0:v:0?",
+            "-map", "0:a?",
+            "-c", "copy",
+        ]
+        if fmt in {"mp4", "m4v", "mov"}:
+            cmd += ["-movflags", "+faststart"]
+        cmd.append(str(destination))
+
+        completed = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if completed.returncode == 0:
+            return ConversionResult(
+                source=source,
+                destination=destination,
+                status="success",
+                action="remuxed",
+                output_format=fmt,
+                message=f"Remuxed to .{fmt} without re-encoding.",
+                duration_seconds=time.perf_counter() - start,
+                ffmpeg_return_code=0,
+            )
+        # Clean up any partial output left by the failed attempt before re-encoding.
+        try:
+            if destination.exists():
+                destination.unlink()
+        except OSError:
+            pass
+        return None
 
     def _video_args(self, output_format: str, config: ConversionConfig) -> list[str]:
         args = ["-map", "0:v:0?", "-map", "0:a?"]

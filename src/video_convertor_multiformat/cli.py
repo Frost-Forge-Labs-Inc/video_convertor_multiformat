@@ -31,7 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-recursive", action="store_true", help="Only process files directly in input directory.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing output files.")
     parser.add_argument("--crf", type=int, default=18, help="Video quality, 0-51. Lower is better. Default: 18.")
-    parser.add_argument("--preset", default="slow", help="FFmpeg x264 preset. Default: slow.")
+    parser.add_argument("--preset", default="medium", help="FFmpeg x264 preset. Default: medium.")
     parser.add_argument("--audio-bitrate", default="192k", help="Audio bitrate. Default: 192k.")
     parser.add_argument("--flat", action="store_true", help="Do not preserve input subfolder structure.")
     parser.add_argument("--convert-same-extension", action="store_true", help="Re-encode files even when input and output extensions match.")

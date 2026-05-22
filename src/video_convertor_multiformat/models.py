@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Literal
 
 Status = Literal["success", "failed", "skipped"]
-Action = Literal["converted", "copied", "skipped", "failed"]
+Action = Literal["converted", "copied", "remuxed", "skipped", "failed"]
 
 DEFAULT_OUTPUT_FORMATS = ("mp4",)
 DEFAULT_INPUT_EXTENSIONS = (
@@ -38,7 +38,7 @@ class ConversionConfig:
     recursive: bool = True
     overwrite: bool = False
     crf: int = 18
-    preset: str = "slow"
+    preset: str = "medium"
     audio_bitrate: str = "192k"
     preserve_structure: bool = True
     copy_same_extension: bool = True

@@ -11,6 +11,7 @@ import os
 import queue
 import sys
 import threading
+import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -40,11 +41,13 @@ class ConverterApp(tk.Tk):
         self._modal_after_ids: list[str] = []
         self._total_jobs = 0
         self._completed_jobs = 0
+        self._conversion_start: float | None = None
+        self._timer_after_id: str | None = None
 
         self.input_var = tk.StringVar()
         self.output_var = tk.StringVar()
         self.crf_var = tk.IntVar(value=18)
-        self.preset_var = tk.StringVar(value="slow")
+        self.preset_var = tk.StringVar(value="medium")
         self.audio_bitrate_var = tk.StringVar(value="192k")
         self.overwrite_var = tk.BooleanVar(value=False)
         self.recursive_var = tk.BooleanVar(value=True)
@@ -109,10 +112,13 @@ class ConverterApp(tk.Tk):
         self.progress_label = ttk.Label(progress_frame, text="", width=24, anchor="e")
         self.progress_label.pack(side="right")
 
+        self.time_label = ttk.Label(root, text="", anchor="w", foreground="#555555")
+        self.time_label.grid(row=6, column=0, columnspan=3, sticky="ew", padx=12, pady=(0, 2))
+
         self.log_box = tk.Text(root, height=20, wrap="word")
-        self.log_box.grid(row=6, column=0, columnspan=3, sticky="nsew", padx=10, pady=(0, 10))
+        self.log_box.grid(row=7, column=0, columnspan=3, sticky="nsew", padx=10, pady=(0, 10))
         root.columnconfigure(1, weight=1)
-        root.rowconfigure(6, weight=1)
+        root.rowconfigure(7, weight=1)
 
     def _choose_dir(self, var: tk.StringVar) -> None:
         selected = filedialog.askdirectory()
@@ -158,6 +164,9 @@ class ConverterApp(tk.Tk):
         self.log_box.delete("1.0", "end")
         self._total_jobs = 0
         self._completed_jobs = 0
+        self._conversion_start = None
+        self._stop_timer()
+        self.time_label.configure(text="")
         self.progress_bar["value"] = 0
         self.progress_label.configure(text="")
         config = ConversionConfig(
@@ -219,6 +228,7 @@ class ConverterApp(tk.Tk):
                         self.progress_label.configure(
                             text=f"{self._completed_jobs} / {self._total_jobs}  ({pct}%)"
                         )
+                    self._render_time_label()
                 elif isinstance(item, tuple):
                     kind, payload = item
                     if pending_log_lines:
@@ -235,7 +245,10 @@ class ConverterApp(tk.Tk):
                         job_num, name = payload
                         stem = name if len(name) <= 60 else name[:57] + "..."
                         self.status_label.configure(text=f"Working on #{job_num} - {stem}")
+                        self._start_timer()
                     elif kind == "done":
+                        self._stop_timer()
+                        self._render_time_label(final=True)
                         self.status_label.configure(text="Done")
                         self.start_button.configure(state="normal")
                         if self._total_jobs > 0:
@@ -251,6 +264,8 @@ class ConverterApp(tk.Tk):
                         )
                         break
                     elif kind == "error":
+                        self._stop_timer()
+                        self._render_time_label(final=True)
                         self.status_label.configure(text="Failed")
                         self.start_button.configure(state="normal")
                         self._schedule_modal(lambda error=payload: messagebox.showerror("Conversion failed", str(error)))
@@ -308,8 +323,54 @@ class ConverterApp(tk.Tk):
         after_id = self.after(0, run)
         self._modal_after_ids.append(after_id)
 
+    def _start_timer(self) -> None:
+        if self._conversion_start is None:
+            self._conversion_start = time.monotonic()
+            self._tick_timer()
+
+    def _stop_timer(self) -> None:
+        if self._timer_after_id:
+            try:
+                self.after_cancel(self._timer_after_id)
+            except tk.TclError:
+                pass
+            self._timer_after_id = None
+
+    def _tick_timer(self) -> None:
+        if self._is_closing or self._conversion_start is None:
+            return
+        self._render_time_label()
+        self._timer_after_id = self.after(1000, self._tick_timer)
+
+    @staticmethod
+    def _format_duration(seconds: float) -> str:
+        s = int(seconds)
+        h, rem = divmod(s, 3600)
+        m, sec = divmod(rem, 60)
+        if h:
+            return f"{h}h {m:02d}m {sec:02d}s"
+        if m:
+            return f"{m}m {sec:02d}s"
+        return f"{sec}s"
+
+    def _render_time_label(self, final: bool = False) -> None:
+        if self._conversion_start is None:
+            return
+        elapsed = time.monotonic() - self._conversion_start
+        parts = [f"Elapsed: {self._format_duration(elapsed)}"]
+        if self._total_jobs > 0 and self._completed_jobs > 0:
+            rate = elapsed / self._completed_jobs
+            remaining_jobs = self._total_jobs - self._completed_jobs
+            eta = rate * remaining_jobs
+            total_est = rate * self._total_jobs
+            if not final and remaining_jobs > 0:
+                parts.append(f"ETA: {self._format_duration(eta)}")
+            parts.append(f"Est. total: {self._format_duration(total_est)}")
+        self.time_label.configure(text="   ".join(parts))
+
     def _on_close(self) -> None:
         self._is_closing = True
+        self._stop_timer()
         if self._poll_after_id:
             try:
                 self.after_cancel(self._poll_after_id)
